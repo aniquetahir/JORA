@@ -2,6 +2,9 @@ import gradio as gr
 import tkinter as tk
 from tkinter import filedialog
 import time
+from pathlib import Path
+from jora import train_lora, ParallamaConfig, generate_alpaca_dataset
+
 
 def select_directory():
     root = tk.Tk()
@@ -9,16 +12,21 @@ def select_directory():
     folder_path = filedialog.askdirectory()
     return folder_path
 
+
 def select_file():
     root = tk.Tk()
     root.withdraw()
     file_path = filedialog.askopenfilename()
     return file_path
 
-def dummy_train():
-    print('Training')
-    time.sleep(10)
+
+def dummy_train(model_size, hf_path, jax_path, dataset_path, checkpoint_path):
+    config = ParallamaConfig(MODEL_SIZE=model_size, JAX_PARAMS_PATH=jax_path,
+                             LLAMA2_META_PATH=hf_path)
+    dataset = generate_alpaca_dataset(dataset_path, 'train', config)
+    train_lora(config, dataset, checkpoint_path)
     return 'done'
+
 
 with gr.Blocks(analytics_enabled=False) as ui_component:
     with gr.Row():
@@ -44,7 +52,7 @@ with gr.Blocks(analytics_enabled=False) as ui_component:
         lbl_train = gr.components.Label("Start Training -->", show_label=False)
         # txt_done = gr.components.Textbox("", lines=1, show_label=False)
         btn_train = gr.components.Button('Train')
-        btn_train.click(dummy_train, outputs=lbl_train)
+        btn_train.click(dummy_train, inputs=[txt_model_size, txt_hf, txt_jax, txt_dataset, txt_checkpoint],outputs=lbl_train)
 
 
 if __name__ == "__main__":
