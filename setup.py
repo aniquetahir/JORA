@@ -9,7 +9,9 @@ _deps = [
     "transformers>=4.37.0",
     "fire>=0.5.0",
     "numpy>=1.21.2",
-    "einops>=0.6.1"
+    "einops>=0.6.1",
+    "dm-tree>=0.1.8",
+    "gradio>=3.23.0"
 ]
 deps = {b: a for a, b in (re.findall(r"^(([^!=<>~ ]+)(?:[!=<>~ ].*)?$)", x)[0] for x in _deps)}
 
