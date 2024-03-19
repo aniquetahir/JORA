@@ -89,5 +89,12 @@ python -m jora.gui
 | **JORA (Ours)**                                                                                   | **Mem (MB)**   | 23102 (0.00)                                        | **16068 / 16008 (0.00 / 0.00)**                        | **11460 / 11448 / 11448 / 11400 (0.0 / 0.00 / 0.00 / 0.00)**     |
 |                                                                                                   | **Performance (secs)** | **0.19 (0.00)**                                     | **0.79 (0.00)**                                         | **0.44 (0.00)**                                                  |
 
+
+## Contributing
+There are several places where contributions would be appreciated. 
+- Need to test `setup.py`/`requirements.txt` for easy installation.
+- Docker container (nvidia-docker)
+- JAX MPI for multi-node setups. Currently works with single-node multi-gpu setup.
+
 ## Acknowledgements
 Jax Llama-2 model implementation by [ayaka14732](https://github.com/ayaka14732/llama-2-jax)
