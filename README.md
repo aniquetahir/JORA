@@ -97,5 +97,17 @@ There are several places where contributions would be appreciated.
 - Docker container (nvidia-docker)
 - JAX MPI for multi-node setups. Currently works with single-node multi-gpu setup.
 
+## Citation
+```bib
+@misc{tahir2024jora,
+      title={JORA: JAX Tensor-Parallel LoRA Library for Retrieval Augmented Fine-Tuning}, 
+      author={Anique Tahir and Lu Cheng and Huan Liu},
+      year={2024},
+      eprint={2403.11366},
+      archivePrefix={arXiv},
+      primaryClass={cs.LG}
+}
+```
+
 ## Acknowledgements
 Jax Llama-2 model implementation by [ayaka14732](https://github.com/ayaka14732/llama-2-jax)
