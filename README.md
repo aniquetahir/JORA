@@ -92,6 +92,7 @@ python -m jora.gui
 
 ## Contributing
 There are several places where contributions would be appreciated. 
+- Integration of Gemma models
 - Need to test `setup.py`/`requirements.txt` for easy installation.
 - Docker container (nvidia-docker)
 - JAX MPI for multi-node setups. Currently works with single-node multi-gpu setup.
