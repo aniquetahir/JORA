@@ -7,8 +7,11 @@ The scaling of Large Language Models (LLMs) for retrieval-based tasks, particula
 
 ## Installation
 To install the package, run the following command in the root directory of the repository:
+
 ```bash
-pip install -e .
+git clone https://github.com/aniquetahir/JORA.git
+cd JORA
+export PYTHONPATH=$(pwd)
 ```
 
 ## Usage
