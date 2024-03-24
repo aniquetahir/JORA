@@ -6,14 +6,21 @@ The scaling of Large Language Models (LLMs) for retrieval-based tasks, particula
 ---
 
 ## Installation
-Please ensure you have the latest version of jax for GPU installed [https://github.com/google/jax](https://github.com/google/jax)
+Please ensure you have the latest version of jax for GPU installed.
+[https://github.com/google/jax](https://github.com/google/jax)
 
 To install the package, run the following command in the root directory of the repository:
 
 ```bash
 git clone https://github.com/aniquetahir/JORA.git
 cd JORA
-export PYTHONPATH=$(pwd)
+pip install -e .
+```
+
+Make sure Jax can access the GPUs:
+```python
+import jax
+print(jax.devices())
 ```
 
 ## Usage
@@ -95,7 +102,6 @@ python -m jora.gui
 ## Contributing
 There are several places where contributions would be appreciated. 
 - Integration of Gemma models
-- Need to test `setup.py`/`requirements.txt` for easy installation.
 - Docker container (nvidia-docker)
 - JAX MPI for multi-node setups. Currently works with single-node multi-gpu setup.
 
