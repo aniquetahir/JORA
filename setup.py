@@ -3,8 +3,8 @@ import re
 
 _deps = [
     "torch>=2.1.0",
-    "jax>=0.4.25",
-    "optax>=0.2.1",
+    "jax[cuda12_pip] @ https://storage.googleapis.com/jax-releases/jax_releases.html",
+    "optax",
     "tqdm>=4.62.3",
     "transformers>=4.37.0",
     "fire>=0.5.0",
@@ -15,10 +15,8 @@ _deps = [
 ]
 deps = {b: a for a, b in (re.findall(r"^(([^!=<>~ ]+)(?:[!=<>~ ].*)?$)", x)[0] for x in _deps)}
 
-
 def deps_list(*pkgs):
     return [deps[pkg] for pkg in pkgs]
-
 
 setup(
     name='jora',
