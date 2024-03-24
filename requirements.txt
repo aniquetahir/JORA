@@ -1,6 +1,7 @@
 torch>=2.1.0
-jax>=0.4.25
-optax>=0.2.1
+jax[cuda11_pip]
+jaxlib
+optax
 tqdm>=4.62.3
 transformers>=4.37.0
 fire>=0.5.0
