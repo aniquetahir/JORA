@@ -103,6 +103,7 @@ python -m jora.gui
 There are several places where contributions would be appreciated. 
 - Integration of Gemma models
 - Docker container (nvidia-docker)
+- 8-bit support (TransformerEngine?)
 - JAX MPI for multi-node setups. Currently works with single-node multi-gpu setup.
 
 ## Citation
