@@ -127,6 +127,7 @@ python -m jora.gui
 There are several places where contributions would be appreciated. 
 - Gemma models specific todo's:
   - Implementation of LORA dropout
+  - Huggingface conversion
 - Docker container (nvidia-docker)
 - 8-bit support (TransformerEngine?AQT?)
 - JAX MPI for multi-node setups. Currently works with single-node multi-gpu setup.
