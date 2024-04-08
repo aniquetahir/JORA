@@ -14,6 +14,16 @@ class GemmaTokenizer:
     def pad_id(self) -> int:
         """Fast access to the pad id."""
         return self._spm_processor.pad_id()
+    @property
+    def bos_token_id(self) -> int:
+        """Fast access to the bos token id."""
+        return self._spm_processor.bos_id()
+
+    @property
+    def eos_token_id(self) -> int:
+        """Fast access to the eos token id."""
+        return self._spm_processor.eos_id()
+
 
     def tokenize(self,
                  example: str | bytes,
@@ -37,13 +47,17 @@ class GemmaTokenizer:
         if add_eos:
             int_list.append(self._spm_processor.eos_id())
 
-        return jnp.array(int_list, dtype=jnp.int32)
+        return int_list
 
     def __call__(self, input, return_attention_mask: bool = False, add_special_tokens: bool = True, **kwargs):
         if return_attention_mask:
             raise NotImplementedError("return_attention_mask is not implemented for GemmaTokenizer")
+        inp_ids = self.tokenize(input, add_eos=add_special_tokens)
+        # remove bos if add_special_tokens is False
+        if not add_special_tokens:
+            inp_ids = inp_ids[1:]
         return namedtuple('GemmaTokenizerOutput',
-                          ['input_ids'])(self.tokenize(input, add_eos=add_special_tokens))
+                          ['input_ids'])(inp_ids)
 
     def to_string(self, tokens: jax.Array) -> str:
         """Convert an array of tokens to a string."""

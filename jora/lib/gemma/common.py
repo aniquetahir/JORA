@@ -5,6 +5,7 @@ import sys
 from os.path import join as pjoin
 from pathlib import Path
 import tree
+from pprint import pprint
 
 import jax
 from jax import Array
@@ -25,6 +26,7 @@ from typing import Any, Callable, Optional, Dict
 
 import sys
 import jora.lib
+
 sys.modules['lib'] = jora.lib
 
 from lib.dataloader import LlamaDataLoader
@@ -40,15 +42,13 @@ from functools import partial
 from collections import namedtuple
 import pickle
 
-
 # gemma imports
-from gemma_utils import GemmaTokenizer, get_attention_mask_and_positions
-from gemma_config import GemmaConfig, GemmaConfig2B, GemmaConfig7B, GEMMA_VERSIONS
+from .gemma_utils import GemmaTokenizer, get_attention_mask_and_positions
+from .gemma_config import GemmaConfig, GemmaConfig2B, GemmaConfig7B, GEMMA_VERSIONS
 from gemma import params as params_lib
 from gemma import sampler as sampler_lib
 from gemma import transformer as transformer_lib
 import sentencepiece as spm
-
 
 optimize: Optional[Callable]
 active_model_config: GemmaConfig
@@ -69,8 +69,8 @@ gpu_sharding_mp = gpu_sharding_mp.reshape((1, len(gpu_devices)))
 
 
 class ParagemmaConfig(NamedTuple):
-    GEMMA_MODEL_PATH: str # e.g. '/tmp/llama2-13B'
-    MODEL_VERSION: str # '2b', '7b', '2b-it', '7b-it'
+    GEMMA_MODEL_PATH: str  # e.g. '/tmp/llama2-13B'
+    MODEL_VERSION: str  # '2b', '7b', '2b-it', '7b-it'
     NUM_SHARDS: int = None
     LORA_R: int = 16
     LORA_ALPHA: int = 16
@@ -81,11 +81,122 @@ class ParagemmaConfig(NamedTuple):
     MAX_SEQ_LEN = 2000
     N_EPOCHS: int = 7
     SEED: int = 420
-    CACHE_SIZE: int = 30 # Numbber of steps in the transformer's cache
+    CACHE_SIZE: int = 30  # Numbber of steps in the transformer's cache
+
 
 is_process_0 = jax.process_index() == 0
 cpu_device = jax.devices('cpu')[0]
 gpu_device = jax.devices('gpu')[0]
+
+
+def forward_and_loss_fn(lora_params,
+                        pretrained_params,
+                        *,
+                        model: transformer_lib.Transformer,
+                        input_tokens: jax.Array,  # Shape [B, L]
+                        input_mask: jax.Array,  # Shape [B, L]
+                        positions: jax.Array,  # Shape [B, L]
+                        attention_mask: jax.Array,  # [B, L, L]
+                        ) -> jax.Array:
+    """Foward pass and loss function.
+
+    Args:
+      params: model's input parameters.
+      model: gemma transformer model to call.
+      input_tokens: input tokens sequence, shape [B, L].
+      input_mask: tokens to ignore when computing the loss, shape [B, L].
+      positions: relative position of each token, shape [B, L].
+      attention_mask: input attention mask, shape [B, L].
+
+    Returns:
+      Softmax cross-entropy loss for the next-token prediction task.
+    """
+    params = merge_lora_params(pretrained_params, lora_params)
+    # Foward pass on the input data.
+    # No attention cache is needed here.
+    logits, _ = model.apply(
+        {'params': params['transformer']},
+        input_tokens,
+        positions,
+        None,  # Attention cache is None.
+        attention_mask,
+    )
+
+    # Exclude the last step as it does not appear in the targets.
+    logits = logits[0, :-1]
+
+    # Similarly, the first token cannot be predicteds.
+    target_tokens = input_tokens[0, 1:]
+    target_mask = input_mask[0, 1:]
+
+    # Convert the target labels into one-hot encoded vectors.
+    one_hot = jax.nn.one_hot(target_tokens, logits.shape[-1])
+
+    # Don't update on unwanted tokens.
+    one_hot = one_hot * target_mask.astype(one_hot.dtype)[..., None]
+
+    # Normalisation factor.
+    norm_factor = 1 / (jnp.sum(target_mask) + 1e-8)
+
+    # Return the nll loss.
+    return -jnp.sum(jax.nn.log_softmax(logits) * one_hot) * norm_factor
+
+
+def train_step_lora(model: transformer_lib.Transformer,
+               lora_params,
+               params,
+               opt_state: optax.OptState,
+               total_loss: jax.Array,
+               input_tokens: jax.Array,
+               target_mask: jax.Array,
+               positions: jax.Array,
+               attention_mask: jax.Array,
+               ) -> tuple[jax.Array, optax.OptState]:
+    """Train step.
+
+    Args:
+      model: gemma transformer model.
+      params: model's input parameters.
+      optimizer: optax optimizer to use.
+      opt_state: input optimizer's state.
+      pad_id: id of the pad token.
+      example: input batch.
+
+    Returns:
+      Training loss, updated parameters, updated optimizer state.
+    """
+    # TODO Lora dropout
+
+    # Forward and backward passes
+    train_loss, grads = jax.value_and_grad(forward_and_loss_fn)(
+                                                                lora_params,
+                                                                params,
+                                                                model=model,
+                                                                input_tokens=input_tokens,
+                                                                input_mask=target_mask,
+                                                                positions=positions,
+                                                                attention_mask=attention_mask)
+    total_loss += train_loss
+    # Update the parameters
+    updates, opt_state = optimize(grads, opt_state, lora_params)
+    lora_params = optax.apply_updates(lora_params, updates)
+    return lora_params, opt_state, total_loss, train_loss
+
+
+def validation_step(model: transformer_lib.Transformer,
+                    params,
+                    pad_id: int,
+                    example,
+                    ):
+    # TODO lorize the step
+    positions, attention_mask = get_attention_mask_and_positions(example.input_tokens, pad_id)
+    val_loss = forward_and_loss_fn(params,
+                                   model=model,
+                                   input_tokens=example.input_tokens,
+                                   input_mask=example.target_mask,
+                                   positions=positions,
+                                   attention_mask=attention_mask)
+    return val_loss
 
 
 def merge_lora_params(params, lora_params: Dict):
@@ -94,14 +205,14 @@ def merge_lora_params(params, lora_params: Dict):
         if 'kv_einsum' in path:
             v_lora_A = lora_params[path]['v_lora_A']
             v_lora_B = lora_params[path]['v_lora_B']
-            merged_V = v[1] + jnp.einsum('hmr,hrk->hmk', v_lora_A, v_lora_B) # this gives us the same dimension as v[1]
-            return jnp.vstack([v[0], merged_V])
+            merged_V = v[1] + jnp.einsum('hmr,hrk->hmk', v_lora_A, v_lora_B)  # this gives us the same dimension as v[1]
+            return jnp.stack([v[0], merged_V])
         elif 'q_einsum' in path:
             return v + jnp.einsum('hmr,hrv->hmv', lora_params[path]['q_lora_A'], lora_params[path]['q_lora_B'])
         else:
             return v
 
-    merged_params = jax.tree_util.tree_map_with_path(merge_fn, params)
+    merged_params = tree.map_structure_with_path(merge_fn, params)
     return merged_params
 
 
@@ -120,7 +231,8 @@ def generate_alpaca_dataset(path: str, split: str, config: ParagemmaConfig, spli
     vocab.Load(vocab_path)
 
     tokenizer = GemmaTokenizer(vocab)
-    dataset = AlpacaDataset(split=split, path=path, split_percentage=split_percentage, tokenizer=tokenizer, alpaca_mix=alpaca_mix)
+    dataset = AlpacaDataset(split=split, path=path, split_percentage=split_percentage, tokenizer=tokenizer,
+                            alpaca_mix=alpaca_mix)
     return dataset
 
 
@@ -130,7 +242,8 @@ def train_lora(config: ParagemmaConfig, train_dataset: AlpacaDataset, checkpoint
     global active_model_config
 
     if not config.GEMMA_MODEL_PATH or not config.MODEL_VERSION:
-        raise ValueError('Please provide a valid GEMMA_MODEL_PATH and MODEL_VERSION in the config (2b, 7b, 2b-it, 7b-it)')
+        raise ValueError(
+            'Please provide a valid GEMMA_MODEL_PATH and MODEL_VERSION in the config (2b, 7b, 2b-it, 7b-it)')
 
     if not config.MODEL_VERSION in GEMMA_VERSIONS:
         raise ValueError(f'Please provide a valid MODEL_SIZE in the config ({" ,".join(GEMMA_VERSIONS)})')
@@ -147,7 +260,6 @@ def train_lora(config: ParagemmaConfig, train_dataset: AlpacaDataset, checkpoint
     vocab = spm.SentencePieceProcessor(vocab_path)
     vocab.Load(vocab_path)
     tokenizer = GemmaTokenizer(vocab)
-
 
     # dataset = AlpacaDataset(split='train', path='./merged_dataset_insta_4chan.json', tokenizer=tokenizer, max_len=max_len, alpaca_mix=0.)
     dataset = train_dataset
@@ -186,9 +298,9 @@ def train_lora(config: ParagemmaConfig, train_dataset: AlpacaDataset, checkpoint
             return jax.device_put(v, mesh_sharding(P('p', None, None)))
         elif 'kv_einsum' in path:
             # get the key
-            value_shape = v[1].shape # (n_heads, d_m, d_v)
-            v_A_shape = (*value_shape[:-1], config.LORA_R) # (n_heads, d_m, r)
-            v_B_shape = (value_shape[0], config.LORA_R, *value_shape[-1:]) # (n_heads, r, d_v)
+            value_shape = v[1].shape  # (n_heads, d_m, d_v)
+            v_A_shape = (*value_shape[:-1], config.LORA_R)  # (n_heads, d_m, r)
+            v_B_shape = (value_shape[0], config.LORA_R, value_shape[-1])  # (n_heads, r, d_v)
             # create the lora params
             with jax.default_device(cpu_device):
                 v_lora_A = jnp.zeros(v_A_shape, dtype=jnp.bfloat16)
@@ -200,11 +312,11 @@ def train_lora(config: ParagemmaConfig, train_dataset: AlpacaDataset, checkpoint
             }
 
             return jax.device_put(v, mesh_sharding(P(None, None, None, None))) \
-                if v.shape[1] == 1 else\
+                if v.shape[1] == 1 else \
                 jax.device_put(v, mesh_sharding(P(None, 'p', None, None)))
         elif 'q_einsum' in path:
-            q_A_shape = (*v.shape[:-1], config.LORA_R)
-            q_B_shape = (config.LORA_R, *v.shape[-1:])
+            q_A_shape = (*v.shape[:-1], config.LORA_R)  # (n_heads, d_m, r)
+            q_B_shape = (v.shape[0], config.LORA_R, v.shape[-1])  # (n_heads, r, d_k)
             # create the lora params
             with jax.default_device(cpu_device):
                 q_lora_A = jnp.zeros(q_A_shape, dtype=jnp.bfloat16)
@@ -250,7 +362,7 @@ def train_lora(config: ParagemmaConfig, train_dataset: AlpacaDataset, checkpoint
             v['q_lora_A'] = jax.device_put(v['q_lora_A'], mesh_sharding(P('p', None, None)))
             v['q_lora_B'] = jax.device_put(v['q_lora_B'], mesh_sharding(P('p', None, None)))
 
-
+    # merge_lora_params(params, lora_map)
 
     if is_process_0 and verbose:
         print('Successfully loaded and sharded model parameters!')
@@ -274,32 +386,45 @@ def train_lora(config: ParagemmaConfig, train_dataset: AlpacaDataset, checkpoint
     verbosity_freq = num_batches // 100
     jax.clear_caches()
 
+    # combined_params = merge_lora_params(params, lora_map)
+    # compare the shapes
+    # shape_equality = jax.tree_map(lambda x, y: x.shape == y.shape, params, combined_params)
+    # pprint(shape_equality)
+
+
+    compiled_train_step = jax.jit(train_step_lora, static_argnames=('model',))
+    model = transformer_lib.Transformer(model_config)
     for epoch in tqdm(range(config.N_EPOCHS)):
         total_loss = jnp.zeros(())
 
         for step, data_batch in enumerate(dataloader):
-            lora_params, opt_state, total_loss, loss, key = train_step_lora(lora_params, loraConfig, params, opt_state,
-                                                                            total_loss, data_batch, key)
+            # input_tokens: input tokens sequence, shape[B, L].
+            input_tokens = data_batch.seq
+            # input_mask: tokens to ignore when computing the loss, shape [B, L].
+            input_mask = data_batch.seq_mask != data_batch.labels_mask
+            positions, att_mask = get_attention_mask_and_positions(input_tokens, tokenizer.pad_id)
+
+            lora_map, opt_state, total_loss, loss = compiled_train_step(
+                model,
+                lora_map, params, opt_state, total_loss,
+                input_tokens, input_mask, positions, att_mask)
             if step % verbosity_freq == 0 and verbose:
                 print(f'total_loss: {total_loss}, loss: {loss}')
 
         # save lora params for this epoch
         with open(os.path.join(checkpoint_dir, f'{checkpoint_prefix}_epoch_{epoch}.pickle'), 'wb') as f:
-            pickle.dump(lora_params, f)
+            pickle.dump(lora_map, f)
 
     with open(os.path.join(checkpoint_dir, f'{checkpoint_prefix}_final.pickle', 'wb')) as f:
-        pickle.dump(lora_params, f)
-
+        pickle.dump(lora_map, f)
 
 
 if __name__ == "__main__":
-
     config = ParagemmaConfig(GEMMA_MODEL_PATH='/home/anique/.cache/kagglehub/models/google/gemma/Flax/2b-it/2',
                              MODEL_VERSION='2b-it')
     dataset_path = Path(__file__).parent.parent.parent / 'alpaca_data_cleaned.json'
 
     alpaca_dataset = generate_alpaca_dataset(dataset_path, 'train', config, alpaca_mix=0.0)
     train_lora(config, alpaca_dataset, 'checkpoints')
-
 
     pass

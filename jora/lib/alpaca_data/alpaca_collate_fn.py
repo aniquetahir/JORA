@@ -2,7 +2,8 @@ from itertools import chain, repeat
 from jax import Array
 import jax.numpy as jnp
 from transformers import LlamaTokenizer
-from typing import NamedTuple
+from jora.lib.gemma.gemma_utils import GemmaTokenizer
+from typing import NamedTuple, Union
 
 class TrainData(NamedTuple):
     seq: Array
@@ -10,9 +11,14 @@ class TrainData(NamedTuple):
     labels: Array
     labels_mask: Array
 
-def alpaca_collate_fn_train(tokenizer: LlamaTokenizer, max_len: int, data_batch: list[tuple[str, str]]):
+def alpaca_collate_fn_train(tokenizer: Union[LlamaTokenizer, GemmaTokenizer], max_len: int, data_batch: list[tuple[str, str]]):
     bos_id = tokenizer.bos_token_id
     eos_id = tokenizer.eos_token_id
+
+    if type(tokenizer) == GemmaTokenizer:
+        pad_id = tokenizer.pad_id
+    else:
+        pad_id = eos_id
 
     seq_list = []
     seq_mask_list = []
@@ -30,11 +36,11 @@ def alpaca_collate_fn_train(tokenizer: LlamaTokenizer, max_len: int, data_batch:
 
         assert len(question) + 1 < max_len, '`max_len` too small'
 
-        seq = list(chain((bos_id,), question, answer, (eos_id,), repeat(eos_id, len_pad)))
-        seq = [x if x!=450 else 1576 for x in seq] # remove unnecessary space when merging tokens
+        seq = list(chain((bos_id,), question, answer, (eos_id,), repeat(pad_id, len_pad)))
+        # seq = [x if x!=450 else 1576 for x in seq] # remove unnecessary space when merging tokens
         seq_mask = list(chain(repeat(True, 1 + len_question + len_answer + 1), repeat(False, len_pad)))
 
-        labels = list(chain(question, answer, (eos_id,), repeat(eos_id, len_pad + 1)))
+        labels = list(chain(question, answer, (eos_id,), repeat(pad_id, len_pad + 1)))
         labels_mask = list(chain(repeat(False, len_question), repeat(True, len_answer + 1), repeat(False, len_pad + 1)))
 
         seq = seq[:max_len]
