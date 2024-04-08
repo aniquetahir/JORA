@@ -1,14 +1,26 @@
 # JORA
 ![jora](jora_architecture.png)
 
-The scaling of Large Language Models (LLMs) for retrieval-based tasks, particularly in Retrieval Augmented Generation (RAG), faces significant memory constraints, especially when fine-tuning extensive prompt sequences. Current open-source libraries support full-model inference and fine-tuning across multiple GPUs but fall short of accommodating the efficient parameter distribution required for retrieved context. Addressing this gap, we introduce a novel framework for PEFT-compatible fine-tuning of Llama-2 models, leveraging distributed training. Our framework uniquely utilizes JAX's just-in-time (JIT) compilation and tensor-sharding for efficient resource management, thereby enabling accelerated fine-tuning with reduced memory requirements. This advancement significantly improves the scalability and feasibility of fine-tuning LLMs for complex RAG applications, even on systems with limited GPU resources. Our experiments show more than 12x improvement in runtime compared to Hugging Face/DeepSpeed implementation with four GPUs while consuming less than half the VRAM per GPU. Our library will be open-sourced in due course.
+The scaling of Large Language Models (LLMs) for retrieval-based tasks, particularly in Retrieval Augmented Generation (RAG), faces significant memory constraints, especially when fine-tuning extensive prompt sequences. Current open-source libraries support full-model inference and fine-tuning across multiple GPUs but fall short of accommodating the efficient parameter distribution required for retrieved context. Addressing this gap, we introduce a novel framework for PEFT-compatible fine-tuning of Llama-2 models, leveraging distributed training. Our framework uniquely utilizes JAX's just-in-time (JIT) compilation and tensor-sharding for efficient resource management, thereby enabling accelerated fine-tuning with reduced memory requirements. This advancement significantly improves the scalability and feasibility of fine-tuning LLMs for complex RAG applications, even on systems with limited GPU resources. Our experiments show more than 12x improvement in runtime compared to Hugging Face/DeepSpeed implementation with four GPUs while consuming less than half the VRAM per GPU.
 
 ---
 
 ## Installation
+Please ensure you have the latest version of jax for GPU installed.
+[https://github.com/google/jax](https://github.com/google/jax)
+
 To install the package, run the following command in the root directory of the repository:
+
 ```bash
+git clone https://github.com/aniquetahir/JORA.git
+cd JORA
 pip install -e .
+```
+
+Make sure Jax can access the GPUs:
+```python
+import jax
+print(jax.devices())
 ```
 
 ## Usage
@@ -85,6 +97,26 @@ python -m jora.gui
 |                                                                                                   | **Performance (secs)** | 4.56 (0.04)                                         | 2.81 (0.02)                                             | 5.45 (0.09)                                                      |
 | **JORA (Ours)**                                                                                   | **Mem (MB)**   | 23102 (0.00)                                        | **16068 / 16008 (0.00 / 0.00)**                        | **11460 / 11448 / 11448 / 11400 (0.0 / 0.00 / 0.00 / 0.00)**     |
 |                                                                                                   | **Performance (secs)** | **0.19 (0.00)**                                     | **0.79 (0.00)**                                         | **0.44 (0.00)**                                                  |
+
+
+## Contributing
+There are several places where contributions would be appreciated. 
+- Integration of Gemma models
+- Docker container (nvidia-docker)
+- 8-bit support (TransformerEngine?)
+- JAX MPI for multi-node setups. Currently works with single-node multi-gpu setup.
+
+## Citation
+```bib
+@misc{tahir2024jora,
+      title={JORA: JAX Tensor-Parallel LoRA Library for Retrieval Augmented Fine-Tuning}, 
+      author={Anique Tahir and Lu Cheng and Huan Liu},
+      year={2024},
+      eprint={2403.11366},
+      archivePrefix={arXiv},
+      primaryClass={cs.LG}
+}
+```
 
 ## Acknowledgements
 Jax Llama-2 model implementation by [ayaka14732](https://github.com/ayaka14732/llama-2-jax)

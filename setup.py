@@ -2,9 +2,9 @@ from setuptools import setup, find_packages
 import re
 
 _deps = [
-    "torch>=2.1.0",
-    "jax>=0.4.25",
-    "optax>=0.2.1",
+    "torch",
+    # "jax",
+    "optax",
     "tqdm>=4.62.3",
     "transformers>=4.37.0",
     "fire>=0.5.0",
@@ -15,10 +15,8 @@ _deps = [
 ]
 deps = {b: a for a, b in (re.findall(r"^(([^!=<>~ ]+)(?:[!=<>~ ].*)?$)", x)[0] for x in _deps)}
 
-
 def deps_list(*pkgs):
     return [deps[pkg] for pkg in pkgs]
-
 
 setup(
     name='jora',
@@ -29,8 +27,8 @@ setup(
     long_description=open('README.md').read(),
     long_description_content_type='text/markdown',
     url='http://github.com/aniquetahir/jora',
-    package_dir={"": "jora"},
-    packages=find_packages("jora"),
+    package_dir={"": "."},
+    packages=find_packages(),
     license='Creative Commons NonCommercial License',
     classifiers=[
         'License :: Other/Proprietary License',
@@ -47,12 +45,14 @@ setup(
     install_requires=[
         # list of packages your project depends on
         deps['torch'],
-        deps['jax'],
+        # deps['jax'],
         deps['optax'],
         deps['tqdm'],
         deps['transformers'],
         deps['fire'],
         deps['numpy'],
-        deps['einops']
+        deps['einops'],
+        deps['dm-tree'],
+        deps['gradio']
     ],
 )
