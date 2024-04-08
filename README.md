@@ -1,6 +1,8 @@
 # JORA
 ![jora](jora_architecture.png)
 
+**Update (4/8/2024)**: JORA now supports Google's Gemma models.
+
 The scaling of Large Language Models (LLMs) for retrieval-based tasks, particularly in Retrieval Augmented Generation (RAG), faces significant memory constraints, especially when fine-tuning extensive prompt sequences. Current open-source libraries support full-model inference and fine-tuning across multiple GPUs but fall short of accommodating the efficient parameter distribution required for retrieved context. Addressing this gap, we introduce a novel framework for PEFT-compatible fine-tuning of Llama-2 models, leveraging distributed training. Our framework uniquely utilizes JAX's just-in-time (JIT) compilation and tensor-sharding for efficient resource management, thereby enabling accelerated fine-tuning with reduced memory requirements. This advancement significantly improves the scalability and feasibility of fine-tuning LLMs for complex RAG applications, even on systems with limited GPU resources. Our experiments show more than 12x improvement in runtime compared to Hugging Face/DeepSpeed implementation with four GPUs while consuming less than half the VRAM per GPU.
 
 ---
@@ -46,6 +48,7 @@ class ParallamaConfig(NamedTuple):
 ```
 
 #### Example Usage
+**Llama-2 based models**
 ```python
 from jora import train_lora, ParallamaConfig, generate_alpaca_dataset
 
@@ -54,6 +57,27 @@ config = ParallamaConfig(MODEL_SIZE=model_size, JAX_PARAMS_PATH=jax_path,
 dataset = generate_alpaca_dataset(dataset_path, 'train', config)
 train_lora(config, dataset, checkpoint_path)
 ```
+
+**Gemma based models**
+Flax Gemma models can be downloaded from Kaggle:
+```python
+import kagglehub
+VARIANT = '2b-it' # @param ['2b', '2b-it', '7b', '7b-it'] {type:"string"}
+weights_dir = kagglehub.model_download(f'google/gemma/Flax/{VARIANT}')
+```
+By default, the kagglehub stores the model in the `~/.cache/kagglehub` directory. 
+
+
+```python
+from jora import ParagemmaConfig, train_lora_gemma, generate_alpaca_dataset_gemma
+
+# model version in '2b', '2b-it', '7b', '7b-it'
+config = ParagemmaConfig(GEMMA_MODEL_PATH=model_path, MODEL_VERSION=model_version)
+dataset = generate_alpaca_dataset_gemma(dataset_path, 'train', config)
+train_lora_gemma(config, dataset, checkpoint_path)
+```
+
+
 
 The `generate_alpaca_dataset` function is used to generate the dataset from an Alpaca format json file. This helps with 
 instruct format training since the dataset processing, tokenization, and batching is handled by the library. Alternatively,
@@ -101,9 +125,10 @@ python -m jora.gui
 
 ## Contributing
 There are several places where contributions would be appreciated. 
-- Integration of Gemma models
+- Gemma models specific todo's:
+  - Implementation of LORA dropout
 - Docker container (nvidia-docker)
-- 8-bit support (TransformerEngine?)
+- 8-bit support (TransformerEngine?AQT?)
 - JAX MPI for multi-node setups. Currently works with single-node multi-gpu setup.
 
 ## Citation
@@ -120,3 +145,4 @@ There are several places where contributions would be appreciated.
 
 ## Acknowledgements
 Jax Llama-2 model implementation by [ayaka14732](https://github.com/ayaka14732/llama-2-jax)
+Flax Gemma model implementation by [Google Deepmind](https://github.com/google-deepmind/gemma)
