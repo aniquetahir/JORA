@@ -60,16 +60,32 @@ class ParallamaConfig(NamedTuple):
     JAX_PARAMS_PATH: str
     LLAMA2_META_PATH: str # e.g. '/tmp/llama2-13B'
     MODEL_SIZE: str # '7B', '13B', '70B'
-    NUM_GPUS: int = None
-    LORA_R: int = 16
-    LORA_ALPHA: int = 16
-    LORA_DROPOUT: float = 0.05
-    LR: float = 0.0001
-    BATCH_SIZE: int = 1
-    N_ACCUMULATION_STEPS: int = 8
-    MAX_SEQ_LEN = 2000
-    N_EPOCHS: int = 7
-    SEED: int = 420
+    NUM_GPUS: int
+    LORA_R: int
+    LORA_ALPHA: int
+    LORA_DROPOUT: float
+    LR: float
+    BATCH_SIZE: int
+    N_ACCUMULATION_STEPS: int
+    MAX_SEQ_LEN: int
+    N_EPOCHS: int
+    SEED: int
+
+ParallamaConfig.__new__.__defaults__ = (
+    None,
+    None,
+    None,
+    None,
+    16,
+    16,
+    0.05,
+    0.0001,
+    1,
+    8,
+    2000,
+    7,
+    420
+)
 
 
 is_process_0 = jax.process_index() == 0

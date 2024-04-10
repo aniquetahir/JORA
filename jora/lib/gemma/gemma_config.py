@@ -13,5 +13,7 @@ GEMMA_VERSIONS = set([
     '2b',
     '2b-it',
     '7b',
-    '7b-it'
+    '7b-it',
+    '1.1-2b-it',
+    '1.1-7b-it'
 ])

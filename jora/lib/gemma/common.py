@@ -71,17 +71,33 @@ gpu_sharding_mp = gpu_sharding_mp.reshape((1, len(gpu_devices)))
 class ParagemmaConfig(NamedTuple):
     GEMMA_MODEL_PATH: str  # e.g. '/tmp/llama2-13B'
     MODEL_VERSION: str  # '2b', '7b', '2b-it', '7b-it'
-    NUM_SHARDS: int = None
-    LORA_R: int = 16
-    LORA_ALPHA: int = 16
-    LORA_DROPOUT: float = 0.05
-    LR: float = 0.0001
-    BATCH_SIZE: int = 1
-    N_ACCUMULATION_STEPS: int = 8
-    MAX_SEQ_LEN = 2000
-    N_EPOCHS: int = 7
-    SEED: int = 420
-    CACHE_SIZE: int = 30  # Numbber of steps in the transformer's cache
+    NUM_SHARDS: int
+    LORA_R: int
+    LORA_ALPHA: int
+    LORA_DROPOUT: float
+    LR: float
+    BATCH_SIZE: int
+    N_ACCUMULATION_STEPS: int
+    MAX_SEQ_LEN: int
+    N_EPOCHS: int
+    SEED: int
+    CACHE_SIZE: int  # Numbber of steps in the transformer's cache
+
+ParagemmaConfig.__new__.__defaults__ = (
+    None,
+    None,
+    None,
+    16,
+    16,
+    0.05,
+    0.0001,
+    1,
+    8,
+    2000,
+    7,
+    420,
+    30
+)
 
 
 is_process_0 = jax.process_index() == 0
