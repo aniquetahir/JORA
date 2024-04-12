@@ -419,6 +419,7 @@ def train_lora(config: ParagemmaConfig, train_dataset: AlpacaDataset, checkpoint
     progress = Progress()
     p_task_epoch = progress.add_task("[red]Epochs...", total=config.N_EPOCHS)
     p_task_step = progress.add_task("[green]Batches...", total=len(dataloader))
+    progress.start()
 
     for epoch in range(config.N_EPOCHS):
         progress.update(p_task_epoch, advance=1)

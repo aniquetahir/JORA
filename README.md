@@ -73,13 +73,22 @@ By default, the kagglehub stores the model in the `~/.cache/kagglehub` directory
 ```python
 from jora import ParagemmaConfig, train_lora_gemma, generate_alpaca_dataset_gemma
 
-# model version in '2b', '2b-it', '7b', '7b-it', '1.1-2b-it', '1.1-7b-it'
+# model version in '2b', '2b-it', '7b', '7b-it' (2b-it, 7b-it for Gemma 1.1)
 config = ParagemmaConfig(GEMMA_MODEL_PATH=model_path, MODEL_VERSION=model_version)
 dataset = generate_alpaca_dataset_gemma(dataset_path, 'train', config)
 train_lora_gemma(config, dataset, checkpoint_path)
 ```
 
-
+==Gemma 1.1==
+For Gemma 1.1 models, KaggleHub stores the model in the following directory structure:
+```
+1.1-7b-it
+├── 1
+│   ├── 7b-it
+│   └── tokenizer.model
+└── 1.complete
+```
+Thus `config.MODEL_VERSION` should be set to `7b-it` for `1.1-7b-it` model.
 
 The `generate_alpaca_dataset` function is used to generate the dataset from an Alpaca format json file. This helps with 
 instruct format training since the dataset processing, tokenization, and batching is handled by the library. Alternatively,
