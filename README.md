@@ -3,6 +3,8 @@
 
 **Update (4/8/2024)**: JORA now supports Google's Gemma models.
 
+**Update (4/11/2024)**: Gemma 1.1 support added
+
 The scaling of Large Language Models (LLMs) for retrieval-based tasks, particularly in Retrieval Augmented Generation (RAG), faces significant memory constraints, especially when fine-tuning extensive prompt sequences. Current open-source libraries support full-model inference and fine-tuning across multiple GPUs but fall short of accommodating the efficient parameter distribution required for retrieved context. Addressing this gap, we introduce a novel framework for PEFT-compatible fine-tuning of Llama-2 models, leveraging distributed training. Our framework uniquely utilizes JAX's just-in-time (JIT) compilation and tensor-sharding for efficient resource management, thereby enabling accelerated fine-tuning with reduced memory requirements. This advancement significantly improves the scalability and feasibility of fine-tuning LLMs for complex RAG applications, even on systems with limited GPU resources. Our experiments show more than 12x improvement in runtime compared to Hugging Face/DeepSpeed implementation with four GPUs while consuming less than half the VRAM per GPU.
 
 ---
@@ -71,7 +73,7 @@ By default, the kagglehub stores the model in the `~/.cache/kagglehub` directory
 ```python
 from jora import ParagemmaConfig, train_lora_gemma, generate_alpaca_dataset_gemma
 
-# model version in '2b', '2b-it', '7b', '7b-it'
+# model version in '2b', '2b-it', '7b', '7b-it', '1.1-2b-it', '1.1-7b-it'
 config = ParagemmaConfig(GEMMA_MODEL_PATH=model_path, MODEL_VERSION=model_version)
 dataset = generate_alpaca_dataset_gemma(dataset_path, 'train', config)
 train_lora_gemma(config, dataset, checkpoint_path)
@@ -146,4 +148,5 @@ There are several places where contributions would be appreciated.
 
 ## Acknowledgements
 Jax Llama-2 model implementation by [ayaka14732](https://github.com/ayaka14732/llama-2-jax)
+
 Flax Gemma model implementation by [Google Deepmind](https://github.com/google-deepmind/gemma)
