@@ -5,6 +5,7 @@ from typing import Literal, Union
 from tqdm import tqdm
 import numpy as np
 from pathlib import Path
+from .alpaca_collate_fn import alpaca_collate_fn_train, alpaca_collate_fn_test
 
 
 def generate_prompt(instruction, input=None):
@@ -93,6 +94,12 @@ class AlpacaDataset(Dataset):
 
     def __getitem__(self, idx: int):
         return self.data[idx]
+
+    def get_collate_fn_train(self):
+        return alpaca_collate_fn_train
+
+    def get_collate_fn_test(self):
+        return alpaca_collate_fn_test
 
     def __len__(self) -> int:
         return len(self.data)

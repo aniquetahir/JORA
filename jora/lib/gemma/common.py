@@ -266,7 +266,7 @@ def train_lora(config: ParagemmaConfig, train_dataset: AlpacaDataset, checkpoint
             'Please provide a valid GEMMA_MODEL_PATH and MODEL_VERSION in the config (2b, 7b, 2b-it, 7b-it)')
 
     if not config.MODEL_VERSION in GEMMA_VERSIONS:
-        raise ValueError(f'Please provide a valid MODEL_SIZE in the config ({" ,".join(GEMMA_VERSIONS)})')
+        raise ValueError(f'Please provide a valid MODEL_SIZE in the config ({" ,".join(GEMMA_VERSIONS)}) \nFor Gemma 1.1 use 2b-it or 7b-it')
 
     # IMPORTANT: these values should be set before jit compilation occurs. Otherwise, it will compile with the wrong values
     active_model_config = model_config_mapping[config.MODEL_VERSION]
@@ -283,7 +283,8 @@ def train_lora(config: ParagemmaConfig, train_dataset: AlpacaDataset, checkpoint
 
     # dataset = AlpacaDataset(split='train', path='./merged_dataset_insta_4chan.json', tokenizer=tokenizer, max_len=max_len, alpaca_mix=0.)
     dataset = train_dataset
-    collate_fn = partial(alpaca_collate_fn_train, tokenizer, config.MAX_SEQ_LEN)
+    collate_fn_train = train_dataset.get_collate_fn_train()
+    collate_fn = partial(collate_fn_train, tokenizer, config.MAX_SEQ_LEN)
 
     dataloader = LlamaDataLoader(dataset, collate_fn, config.BATCH_SIZE, config.SEED)
 
@@ -419,7 +420,7 @@ def train_lora(config: ParagemmaConfig, train_dataset: AlpacaDataset, checkpoint
     p_task_epoch = progress.add_task("[red]Epochs...", total=config.N_EPOCHS)
     p_task_step = progress.add_task("[green]Batches...", total=len(dataloader))
 
-    for epoch in tqdm(range(config.N_EPOCHS)):
+    for epoch in range(config.N_EPOCHS):
         progress.update(p_task_epoch, advance=1)
         total_loss = jnp.zeros(())
 
