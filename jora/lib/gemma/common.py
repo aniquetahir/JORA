@@ -50,6 +50,8 @@ from gemma import sampler as sampler_lib
 from gemma import transformer as transformer_lib
 import sentencepiece as spm
 
+from rich.progress import Progress
+
 optimize: Optional[Callable]
 active_model_config: GemmaConfig
 
@@ -57,7 +59,9 @@ model_config_mapping = {
     '2b': GemmaConfig2B,
     '2b-it': GemmaConfig2B,
     '7b': GemmaConfig7B,
-    '7b-it': GemmaConfig7B
+    '7b-it': GemmaConfig7B,
+    '1.1-2b-it': GemmaConfig2B,
+    '1.1-7b-it': GemmaConfig7B
 }
 
 cpu_devices = jax.devices('cpu')
@@ -283,8 +287,8 @@ def train_lora(config: ParagemmaConfig, train_dataset: AlpacaDataset, checkpoint
 
     dataloader = LlamaDataLoader(dataset, collate_fn, config.BATCH_SIZE, config.SEED)
 
-    LoraConfig = namedtuple('LoraConfig', ['LORA_R', 'LORA_ALPHA', 'LORA_DROPOUT'])
-    loraConfig = LoraConfig(LORA_R=config.LORA_R, LORA_ALPHA=config.LORA_ALPHA, LORA_DROPOUT=config.LORA_DROPOUT)
+    # LoraConfig = namedtuple('LoraConfig', ['LORA_R', 'LORA_ALPHA', 'LORA_DROPOUT'])
+    # loraConfig = LoraConfig(LORA_R=config.LORA_R, LORA_ALPHA=config.LORA_ALPHA, LORA_DROPOUT=config.LORA_DROPOUT)
     with jax.default_device(cpu_device):
         ckpt_path = os.path.join(config.GEMMA_MODEL_PATH, config.MODEL_VERSION)
         params = params_lib.load_and_format_params(ckpt_path)
@@ -410,7 +414,13 @@ def train_lora(config: ParagemmaConfig, train_dataset: AlpacaDataset, checkpoint
 
     compiled_train_step = jax.jit(train_step_lora, static_argnames=('model',))
     model = transformer_lib.Transformer(model_config)
+
+    progress = Progress()
+    p_task_epoch = progress.add_task("[red]Epochs...", total=config.N_EPOCHS)
+    p_task_step = progress.add_task("[green]Batches...", total=len(dataloader))
+
     for epoch in tqdm(range(config.N_EPOCHS)):
+        progress.update(p_task_epoch, advance=1)
         total_loss = jnp.zeros(())
 
         for step, data_batch in enumerate(dataloader):
@@ -425,12 +435,20 @@ def train_lora(config: ParagemmaConfig, train_dataset: AlpacaDataset, checkpoint
                 lora_map, params, opt_state, total_loss,
                 input_tokens, input_mask, positions, att_mask)
             if step % verbosity_freq == 0 and verbose:
-                print(f'total_loss: {total_loss}, loss: {loss}')
+                progress.update(p_task_step, description=f'[green]Batches...\n total_loss: {total_loss}, loss: {loss}')
+                # print(f'total_loss: {total_loss}, loss: {loss}')
+            progress.update(p_task_step, advance=1)
+
+        progress.update(p_task_epoch, description=f'[red]Epochs...\n total_loss: {total_loss}, loss: {loss}')
+        # reset the inner loop progress bar
+        progress.reset(p_task_step)
+
 
         # save lora params for this epoch
         with open(os.path.join(checkpoint_dir, f'{checkpoint_prefix}_epoch_{epoch}.pickle'), 'wb') as f:
             pickle.dump(lora_map, f)
 
+    progress.stop()
     with open(os.path.join(checkpoint_dir, f'{checkpoint_prefix}_final.pickle', 'wb')) as f:
         pickle.dump(lora_map, f)
 

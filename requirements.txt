@@ -9,3 +9,4 @@ numpy>=1.21.2
 einops>=0.6.1
 dm-tree>=0.1.8
 gradio>=3.23.0
+rich
