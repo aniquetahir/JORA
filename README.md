@@ -80,6 +80,7 @@ train_lora_gemma(config, dataset, checkpoint_path)
 ```
 
 ==Gemma 1.1==
+
 For Gemma 1.1 models, KaggleHub stores the model in the following directory structure:
 ```
 1.1-7b-it
@@ -97,6 +98,30 @@ torch `Dataset` and `DataLoader` can be used for custom datasets.
 ### Using trained model with huggingface compatible libraries
 HuggingFace has a vast ecosystem. Since our library uses jax for training, the resulting model is incompatible. To solve this 
 issue, we provide a submodule for converting a jax trained model back to the huggingface format.
+
+Trained lora weights can first be merged with the original parameters:
+```
+SYNOPSIS
+    python -m jora.lora.merge PARAMS_PATH LORA_PATH OUTPUT_PATH <flags>
+
+POSITIONAL ARGUMENTS
+    PARAMS_PATH
+        Type: str
+    LORA_PATH
+        Type: str
+    OUTPUT_PATH
+        Type: str
+
+FLAGS
+    -l, --llama2=LLAMA2
+        Default: False
+    -g, --gemma=GEMMA
+        Default: False
+
+NOTES
+    You can also use flags syntax for POSITIONAL ARGUMENTS
+```
+
 ```
 SYNOPSIS
     python -m jora.hf HUGGINGFACE_PATH JAX_PATH SAVE_PATH

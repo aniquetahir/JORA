@@ -451,7 +451,7 @@ def train_lora(config: ParagemmaConfig, train_dataset: AlpacaDataset, checkpoint
             pickle.dump(lora_map, f)
 
     progress.stop()
-    with open(os.path.join(checkpoint_dir, f'{checkpoint_prefix}_final.pickle', 'wb')) as f:
+    with open(os.path.join(checkpoint_dir, f'{checkpoint_prefix}_final.pickle'), 'wb') as f:
         pickle.dump(lora_map, f)
 
 
