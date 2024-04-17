@@ -382,7 +382,7 @@ def train_lora(config: ParagemmaConfig, train_dataset: AlpacaDataset, checkpoint
                 'q_lora_A': q_lora_A,
                 'q_lora_B': q_lora_B
             }
-            
+            return jax.device_put(v, mesh_sharding(P(None, 'p', None, None)))
         elif 'gating_einsum' in path:
             return jax.device_put(v, mesh_sharding(P(None, None, 'p')))
         elif 'linear' in path:
