@@ -64,18 +64,15 @@ def merge_gemma(params_path: str, lora_path: str, output_path: str):
     for k, v in lora_params.items():
         orb_key = '/'.join(k[:-1])
         if 'kv_einsum' in k:
-            breakpoint()
             v_lora_A = v['v_lora_A']
             v_lora_B = v['v_lora_B']
             w = orb_params[orb_key]['w']
             merged_v = w[1] + jnp.einsum('hmr,hrk->hmk', v_lora_A, v_lora_B)
             orb_params[orb_key]['w'] = np.array(jnp.stack([w[0], merged_v]))
         elif 'q_einsum' in k:
-            breakpoint()
             w = orb_params[orb_key]['w']
             orb_params[orb_key]['w'] = np.array(w + jnp.einsum('hmr,hrv->hmv', v['q_lora_A'], v['q_lora_B']))
         elif 'qkv_einsum' in k:
-            breakpoint()
             w = orb_params[orb_key]['w']
             q_ = w[0]
             k_ = w[1]
@@ -89,7 +86,6 @@ def merge_gemma(params_path: str, lora_path: str, output_path: str):
             merged_v = v_ + jnp.einsum('hmr,hrk->hmk', v_lora_A, v_lora_B)
 
             orb_params[orb_key]['w'] = np.array(jnp.stack([merged_q, k_, merged_v]))
-    breakpoint()
     print('lora loaded')
 
     # save the parameters to the desired path
