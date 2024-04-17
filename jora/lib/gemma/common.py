@@ -415,7 +415,14 @@ def train_lora(config: ParagemmaConfig, train_dataset: AlpacaDataset, checkpoint
         elif 'q_einsum' in k:
             v['q_lora_A'] = jax.device_put(v['q_lora_A'], mesh_sharding(P('p', None, None)))
             v['q_lora_B'] = jax.device_put(v['q_lora_B'], mesh_sharding(P('p', None, None)))
-
+        elif 'qkv_einsum' in k:
+            # both q and v are going to be sharded 
+            v['q_lora_A'] = jax.device_put(v['q_lora_A'], mesh_sharding(P('p', None, None)))
+            v['q_lora_B'] = jax.device_put(v['q_lora_B'], mesh_sharding(P('p', None, None)))
+            v['v_lora_A'] = jax.device_put(v['v_lora_A'], mesh_sharding(P('p', None, None)))
+            v['v_lora_B'] = jax.device_put(v['v_lora_B'], mesh_sharding(P('p', None, None)))
+ 
+ 
     # merge_lora_params(params, lora_map)
 
     if is_process_0 and verbose:
