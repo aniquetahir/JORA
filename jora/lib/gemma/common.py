@@ -229,6 +229,19 @@ def merge_lora_params(params, lora_params: Dict):
             return jnp.stack([v[0], merged_V])
         elif 'q_einsum' in path:
             return v + jnp.einsum('hmr,hrv->hmv', lora_params[path]['q_lora_A'], lora_params[path]['q_lora_B'])
+        elif 'qkv_einsum' in path:
+            q_ = v[0]
+            k_ = v[1]
+            v_ = v[2]
+            q_lora_A = lora_params[path]['q_lora_A']
+            q_lora_B = lora_params[path]['q_lora_B']
+            v_lora_A = lora_params[path]['v_lora_A']
+            v_lora_B = lora_params[path]['v_lora_B']
+            
+            merged_q = q_ + jnp.einsum('hmr,hrk->hmk', q_lora_A, q_lora_B)
+            merged_v = v_ + jnp.einsum('hmr,hrk->hmk', v_lora_A, v_lora_B)
+
+            return jnp.stack([merged_q, k_, merged_v])
         else:
             return v
 
@@ -349,6 +362,26 @@ def train_lora(config: ParagemmaConfig, train_dataset: AlpacaDataset, checkpoint
             }
 
             return jax.device_put(v, mesh_sharding(P('p', None, None)))
+        elif 'qkv_einsum' in path:
+            value_shape = v[1].shape
+            v_A_shape = (*value_shape[:-1], config.LORA_R)
+            v_B_shape = (value_shape[0], config.LORA_R)
+
+            q_A_shape, q_B_shape = v_A_shape, v_B_shape
+
+            with jax.default_device(cpu_device):
+                v_lora_A = jnp.zeros(v_A_shape, dtype=jnp.bfloat16)
+                v_lora_B = jnp.zeros(v_B_shape, dtype=jnp.bfloat16)
+                q_lora_A = jnp.zeros(q_A_shape, dtype=jnp.bfloat16) 
+                q_lora_B = jnp.zeros(q_B_shape, dtype=jnp.bfloat16) 
+
+            lora_map[path] = {
+                'v_lora_A': v_lora_A, 
+                'v_lora_B': v_lora_B, 
+                'q_lora_A': q_lora_A,
+                'q_lora_B': q_lora_B
+            }
+            
         elif 'gating_einsum' in path:
             return jax.device_put(v, mesh_sharding(P(None, None, 'p')))
         elif 'linear' in path:
