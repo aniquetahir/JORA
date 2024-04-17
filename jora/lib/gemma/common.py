@@ -363,9 +363,10 @@ def train_lora(config: ParagemmaConfig, train_dataset: AlpacaDataset, checkpoint
 
             return jax.device_put(v, mesh_sharding(P('p', None, None)))
         elif 'qkv_einsum' in path:
-            value_shape = v[1].shape
-            v_A_shape = (*value_shape[:-1], config.LORA_R)
-            v_B_shape = (value_shape[0], config.LORA_R)
+            # v.shape (3, n_heads, d_m, d_k)
+            value_shape = v[1].shape                        # (n_heads, d_m, d_k)                 
+            v_A_shape = (*value_shape[:-1], config.LORA_R)  # (n_heads, d_m, r)
+            v_B_shape = (value_shape[0], config.LORA_R, value_shape[-1])     # (n_heads, r, d_k)
 
             q_A_shape, q_B_shape = v_A_shape, v_B_shape
 
