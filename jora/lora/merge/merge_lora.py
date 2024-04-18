@@ -59,15 +59,6 @@ def merge_gemma(params_path: str, lora_path: str, output_path: str):
     
     with open(lora_path, 'rb') as lora_file:
         lora_params = pickle.load(lora_file)
-    breakpoint()
-    # TODO remove
-    # Load huggingface params
-    from transformers import AutoModel
-    model_hf = AutoModel.from_pretrained('/media/anique/Data/LLMs/HF/gemma-1.1-7b-it')
-    q_values = []
-    for n, p in model_hf.named_parameters():
-        if 'q_proj' in n:
-            q_values.append((n, p,))
 
     # Note: numpy does not support einsum for dtype bfloat16
     for k, v in lora_params.items():
@@ -103,7 +94,6 @@ def merge_gemma(params_path: str, lora_path: str, output_path: str):
     print("Merged parameters saved successfully!")
 
 def merge_lora(params_path:str, lora_path:str, output_path:str, llama2=False, gemma=False):
-    breakpoint()
     if llama2 and gemma:
         raise ValueError('Please specify only one type of model llama2 or gemma. Use -h for help.')
     if llama2:
