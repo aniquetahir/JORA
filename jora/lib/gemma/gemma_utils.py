@@ -61,7 +61,7 @@ class GemmaTokenizer:
 
     def to_string(self, tokens: jax.Array) -> str:
         """Convert an array of tokens to a string."""
-        return self._spm_processor.EncodeIds(tokens.tolist())
+        return self._spm_processor.Decode(tokens.tolist())
 
 
 def get_attention_mask_and_positions(example: jax.Array,
