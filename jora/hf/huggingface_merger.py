@@ -150,6 +150,6 @@ def lorize_huggingface(huggingface_path: str, jax_path: str, save_path: str, lla
 
 if __name__ == "__main__":
     with torch.no_grad():
-        Fire(lorize_huggingface_llama)
+        Fire(lorize_huggingface)
 
 
