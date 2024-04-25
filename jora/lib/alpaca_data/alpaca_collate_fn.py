@@ -53,9 +53,9 @@ def alpaca_collate_fn_train(tokenizer: Union[LlamaTokenizer, GemmaTokenizer], ma
         labels_list.append(labels)
         labels_mask_list.append(labels_mask)
 
-    seq_ = jnp.array(seq_list, dtype=jnp.uint16)
+    seq_ = jnp.array(seq_list, dtype=jnp.uint32)
     seq_mask_ = jnp.array(seq_mask_list, dtype=jnp.bool_)
-    labels_ = jnp.array(labels_list, dtype=jnp.uint16)
+    labels_ = jnp.array(labels_list, dtype=jnp.uint32)
     labels_mask_ = jnp.array(labels_mask_list, dtype=jnp.bool_)
 
     return TrainData(seq_, seq_mask_, labels_, labels_mask_)
